@@ -28,23 +28,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize models lazily
+# Initialize models globally - loaded at startup
 parrot = None
 nlp = None
-
-def get_parrot():
-    global parrot
-    if parrot is None:
-        print("Loading Parrot model...")
-        parrot = Parrot(model_tag="prithivida/parrot_paraphraser_on_T5", use_gpu=False)
-    return parrot
-
-def get_nlp():
-    global nlp
-    if nlp is None:
-        print("Loading spaCy model...")
-        nlp = spacy.load("en_core_web_sm")
-    return nlp
 
 # Request/Response models
 class DetectAIRequest(BaseModel):
@@ -103,8 +89,22 @@ class HumanizeResponse(BaseModel):
 # Startup event
 @app.on_event("startup")
 async def startup_event():
+    global parrot, nlp
+    
+    # Initialize database
     await init_database()
     print("Database initialized")
+    
+    # Load models at startup
+    print("Loading Parrot model...")
+    parrot = Parrot(model_tag="prithivida/parrot_paraphraser_on_T5", use_gpu=False)
+    print("Parrot model loaded")
+    
+    print("Loading spaCy model...")
+    nlp = spacy.load("en_core_web_sm")
+    print("spaCy model loaded")
+    
+    print("Application ready!")
 
 @app.get("/")
 async def root():
@@ -239,9 +239,9 @@ async def humanize_text(request: HumanizeRequest, db: AsyncSession = Depends(get
                 detail=f"Request would exceed usage limit. Current usage: {user.token_usage}/{user.usage_limit}"
             )
         
-        # Load models if not already loaded
-        nlp_model = get_nlp()
-        parrot_model = get_parrot()
+        # Use pre-loaded models
+        nlp_model = nlp
+        parrot_model = parrot
         
         # Split text into sentences using spaCy
         doc = nlp_model(request.text)
