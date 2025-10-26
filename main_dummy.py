@@ -108,9 +108,9 @@ async def root():
         }
     }
 
-def get_or_create_user(db: AsyncSession, user_id: str):
+async def get_or_create_user(db: AsyncSession, user_id: str):
     """Get or create a user with default usage limit"""
-    result = db.execute(select(UserUsage).where(UserUsage.user_id == user_id))
+    result = await db.execute(select(UserUsage).where(UserUsage.user_id == user_id))
     user = result.scalar_one_or_none()
     
     if not user:
@@ -122,8 +122,8 @@ def get_or_create_user(db: AsyncSession, user_id: str):
             usage_limit=default_limit
         )
         db.add(user)
-        db.commit()
-        db.refresh(user)
+        await db.commit()
+        await db.refresh(user)
     
     return user
 
@@ -181,8 +181,8 @@ async def humanize_text(request: HumanizeRequest, db: AsyncSession = Depends(get
         # Update user usage
         user.word_count += word_count
         user.token_usage += token_count
-        db.commit()
-        db.refresh(user)
+        await db.commit()
+        await db.refresh(user)
         
         # Calculate remaining usage
         remaining_usage = user.usage_limit - user.token_usage
@@ -236,8 +236,8 @@ async def detect_ai(request: DetectAIRequest, db: AsyncSession = Depends(get_db)
         # Update user usage
         user.word_count += word_count
         user.token_usage += token_count
-        db.commit()
-        db.refresh(user)
+        await db.commit()
+        await db.refresh(user)
         
         # Create dummy sentence details
         sentences = request.text.split('.')
